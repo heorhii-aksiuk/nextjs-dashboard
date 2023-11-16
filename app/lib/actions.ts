@@ -4,6 +4,7 @@ import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { signIn } from "@/auth";
 
 const InvoiceSchema = z.object({
   id: z.string(),
@@ -20,6 +21,7 @@ const InvoiceSchema = z.object({
 });
 
 const CreateInvoice = InvoiceSchema.omit({ id: true, date: true });
+
 const UpdateInvoice = InvoiceSchema.omit({ id: true, date: true });
 
 const INVOICES_PAGE_PATH = "/dashboard/invoices";
@@ -33,7 +35,7 @@ export type State = {
   message?: string | null;
 };
 
-export async function createInvoice(prevState: State, formData: FormData) {
+export async function createInvoice(_: State, formData: FormData) {
   // Validate form using Zod
   const validatedFields = CreateInvoice.safeParse({
     customerId: formData.get("customerId"),
@@ -72,11 +74,7 @@ export async function createInvoice(prevState: State, formData: FormData) {
   redirect("/dashboard/invoices");
 }
 
-export async function updateInvoice(
-  id: string,
-  prevState: State,
-  formData: FormData
-) {
+export async function updateInvoice(id: string, _: State, formData: FormData) {
   // Validate form using Zod
   const validatedFields = UpdateInvoice.safeParse({
     customerId: formData.get("customerId"),
@@ -123,5 +121,19 @@ export async function deleteInvoice(id: string) {
     return {
       message: "Database Error: Failed to Delete Invoice.",
     };
+  }
+}
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData
+) {
+  try {
+    await signIn("credentials", Object.fromEntries(formData));
+  } catch (error) {
+    if ((error as Error).message.includes("CredentialsSignin")) {
+      return "CredentialSignin";
+    }
+    throw error;
   }
 }
